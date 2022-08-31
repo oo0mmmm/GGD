@@ -102,7 +102,7 @@ cost=function(X,y,beta,lambda){
 
 
 #SNGD-SARAH
-snarah.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,update.frequency,lambda,eta,stepsize,b,iteration.number,gradient.based=FALSE,ind,early.stop=TRUE){
+snarah.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,update.frequency,lambda,eta,stepsize,b,epoch,record.time,gradient.based=FALSE,ind,early.stop=TRUE){
   snarahloss=array()
   snarahtestloss=array()
   snarahgradnorm=array()
@@ -110,10 +110,11 @@ snarah.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,u
   beta.breve=initial.beta
   E=0
   a=stepsize
-  ti=iteration.number
+  rt=record.time
+  ti=epoch*rt
   mm=length(trainset.label) 
-  ap=mm%/%16
-  epoch=ti/17
+  ap=mm%/%(rt-1)
+  
 if(early.stop==TRUE){
   if(gradient.based==FALSE){
     
@@ -232,9 +233,9 @@ if(early.stop==FALSE){
     while(E<epoch){
       
         
-    snarahloss[E*17+1]=cost(trainset,trainset.label,beta.breve,lambda)$total.loss
-    snarahtestloss[E*17+1]=cost(testset,testset.label,beta.breve,lambda)$total.loss
-    snarahgradnorm[E*17+1]=sum(Grad(trainset,trainset.label,beta.breve,lambda)^2)
+    snarahloss[E*rt+1]=cost(trainset,trainset.label,beta.breve,lambda)$total.loss
+    snarahtestloss[E*rt+1]=cost(testset,testset.label,beta.breve,lambda)$total.loss
+    snarahgradnorm[E*rt+1]=sum(Grad(trainset,trainset.label,beta.breve,lambda)^2)
       
       
       beta0=beta.breve
@@ -247,9 +248,9 @@ if(early.stop==FALSE){
       while(t<m+1){
         if((t)%%ap==0){
           p=(t)/ap
-          snarahloss[E*17+1+p]=cost(trainset,trainset.label,beta1,lambda)$total.loss
-          snarahtestloss[E*17+1+p]=cost(testset,testset.label,beta1,lambda)$total.loss
-          snarahgradnorm[E*17+1+p]=sum(Grad(trainset,trainset.label,beta1,lambda)^2)
+          snarahloss[E*rt+1+p]=cost(trainset,trainset.label,beta1,lambda)$total.loss
+          snarahtestloss[E*rt+1+p]=cost(testset,testset.label,beta1,lambda)$total.loss
+          snarahgradnorm[E*rt+1+p]=sum(Grad(trainset,trainset.label,beta1,lambda)^2)
         }
         g=array()
         sa=sample(1:mm,b)
@@ -282,12 +283,12 @@ if(early.stop==FALSE){
   }
   if(gradient.based==TRUE){
     
-    while(E<epoch+1){
+    while(E<epoch){
      
         
-        snarahloss[1+E*17]=cost(trainset,trainset.label,beta.breve,lambda)$total.loss
-        snarahtestloss[E*17+1]=cost(testset,testset.label,beta.breve,lambda)$total.loss
-        snarahgradnorm[E*17+1]=sum(Grad(trainset,trainset.label,beta.breve,lambda)^2)
+        snarahloss[1+E*rt]=cost(trainset,trainset.label,beta.breve,lambda)$total.loss
+        snarahtestloss[E*rt+1]=cost(testset,testset.label,beta.breve,lambda)$total.loss
+        snarahgradnorm[E*rt+1]=sum(Grad(trainset,trainset.label,beta.breve,lambda)^2)
       
       
       beta0=beta.breve
@@ -300,9 +301,9 @@ if(early.stop==FALSE){
       while(t<m+1 ){
         if((t)%%ap==0){
           p=(t)/ap
-          snarahloss[E*17+1+p]=cost(trainset,trainset.label,beta1,lambda)$total.loss
-          snarahtestloss[E*17+1+p]=cost(testset,testset.label,beta1,lambda)$total.loss
-          snarahgradnorm[E*17+1+p]=sum(Grad(trainset,trainset.label,beta1,lambda)^2)
+          snarahloss[E*rt+1+p]=cost(trainset,trainset.label,beta1,lambda)$total.loss
+          snarahtestloss[E*rt+1+p]=cost(testset,testset.label,beta1,lambda)$total.loss
+          snarahgradnorm[E*rt+1+p]=sum(Grad(trainset,trainset.label,beta1,lambda)^2)
         }
         g=array()
         sa=sample(1:mm,b)

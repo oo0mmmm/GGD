@@ -116,10 +116,10 @@ syngrad=function(CM,po,b){
 
 
 
-sngd.ad.opt=function(trainset,trainset.label,initial.beta,lambda,epoch,adaptive.stepsize=FALSE,gradient.based=FALSE,initial.stepsize,b,record.time,ind){
+sngd.ad.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,lambda,epoch,adaptive.stepsize=FALSE,gradient.based=FALSE,stepsize,b,record.time,ind){
     
     sngdbeta00=initial.beta
-    a=initial.stepsize
+    a=stepsize
     sngdloss=array()
     sngdtestloss=array()
     sngdgradnorm=array()

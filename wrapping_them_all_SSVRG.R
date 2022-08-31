@@ -101,7 +101,7 @@ cost=function(X,y,beta,lambda){
 
 
 #ssvrg run in parallel
-ssvrg.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,update.frequency,lambda,epoch,stepsize,b,gradient.based=FALSE,ind){
+ssvrg.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,update.frequency,lambda,epoch,record.time,stepsize,b,gradient.based=FALSE,ind){
 ssvrgbeta.breve=initial.beta
 ssvrgloss=array()
 ssvrgtestloss=array()
@@ -109,22 +109,23 @@ ssvrggradnorm=array()
 m=update.frequency
 a=stepsize
 E=1
-ap=m%/%16
+rt=record.time
+ap=m%/%(rt-1)
 mm=length(trainset.label)
 if(gradient.based==TRUE){
   while(E<epoch+1){
     fg=as.vector(Grad(trainset,trainset.label,ssvrgbeta.breve,lambda))
     beta0=ssvrgbeta.breve
-    ssvrgloss[(E-1)*17+1]=cost(trainset,trainset.label,beta0,lambda)$total.loss
-    ssvrgtestloss[(E-1)*17+1]=cost(testset,testset.label,beta0,0)$total.loss
-    ssvrggradnorm[(E-1)*17+1]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
+    ssvrgloss[(E-1)*rt+1]=cost(trainset,trainset.label,beta0,lambda)$total.loss
+    ssvrgtestloss[(E-1)*rt+1]=cost(testset,testset.label,beta0,0)$total.loss
+    ssvrggradnorm[(E-1)*rt+1]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
     k=1
     while(k<m+1){
       if(k%%ap==0){
         p=k/ap
-        ssvrgloss[(E-1)*17+1+p]=cost(trainset,trainset.label,beta0,lambda)$total.loss
-        ssvrgtestloss[(E-1)*17+1+p]=cost(testset,testset.label,beta0,0)$total.loss
-        ssvrggradnorm[(E-1)*17+1+p]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
+        ssvrgloss[(E-1)*rt+1+p]=cost(trainset,trainset.label,beta0,lambda)$total.loss
+        ssvrgtestloss[(E-1)*rt+1+p]=cost(testset,testset.label,beta0,0)$total.loss
+        ssvrggradnorm[(E-1)*rt+1+p]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
       }
       g=array()
       sa=sample(1:mm,b)
@@ -154,16 +155,16 @@ if(gradient.based==FALSE){
   while(E<epoch+1){
     fg=as.vector(Grad(trainset,trainset.label,ssvrgbeta.breve,lambda))
     beta0=ssvrgbeta.breve
-    ssvrgloss[(E-1)*17+1]=cost(trainset,trainset.label,beta0,lambda)$total.loss
-    ssvrgtestloss[(E-1)*17+1]=cost(testset,testset.label,beta0,0)$total.loss
-    ssvrggradnorm[(E-1)*17+1]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
+    ssvrgloss[(E-1)*rt+1]=cost(trainset,trainset.label,beta0,lambda)$total.loss
+    ssvrgtestloss[(E-1)*rt+1]=cost(testset,testset.label,beta0,0)$total.loss
+    ssvrggradnorm[(E-1)*rt+1]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
     k=1
     while(k<m+1){
       if(k%%ap==0){
         p=k/ap
-        ssvrgloss[(E-1)*17+1+p]=cost(trainset,trainset.label,beta0,lambda)$total.loss
-        ssvrgtestloss[(E-1)*17+1+p]=cost(testset,testset.label,beta0,0)$total.loss
-        ssvrggradnorm[(E-1)*17+1+p]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
+        ssvrgloss[(E-1)*rt+1+p]=cost(trainset,trainset.label,beta0,lambda)$total.loss
+        ssvrgtestloss[(E-1)*rt+1+p]=cost(testset,testset.label,beta0,0)$total.loss
+        ssvrggradnorm[(E-1)*rt+1+p]=sum(Grad(trainset,trainset.label,beta0,lambda)^2)
       }
       g=array()
       sa=sample(1:mm,b)
