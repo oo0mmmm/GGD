@@ -1,4 +1,4 @@
-# Do in Parallel for sgd (logistic regression with r^2 regularization)
+# Do in Parallel for ggd (logistic regression with r^2 regularization)
 
 library(data.table)
 library(Matrix)
@@ -31,59 +31,36 @@ read.libsvm2 = function( filename ) {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-#scale data into [0,1]
-sc0=function(X){
-  n=length(X)
-  m=min(X)
-  M=max(X)
-  return((X-m)/(M-m))
-}
-
-
-
-
-
 #Sigmoid function
 
 sigmoid=function(z){
   return(1/(1+exp(-z)))
 }
-#Compute the gradient of a mini-batch sample in logistic regression
 
+
+
+#vector-version: compute gradient and output it
+gradz=function(x,z,y,beta,lambda){
+  return(x*as.vector(sigmoid(z)-y)+lambda*beta)
+}
+
+#Use to evaluate L2-norm of full gradient when recording.
 Grad=function(X,y,beta,lambda){
   n=length(y)
   return(1/n * t(X)%*%(sigmoid(X%*%beta)-y)+lambda*beta)
 }
-#vector-version
-grad=function(x,y,beta,lambda){
-  return(x*as.vector(sigmoid(x%*%beta)-y)+lambda*beta)
-}
 
-#Compute each gradient of a mini-batch sample in logistic regression
-
-GradE=function(X,y,beta,lambda){
+#Compute batch of gradient and output a Jacobian matrix
+GradEz=function(X,z,y,beta,lambda){
   n=length(y)
   d=ncol(X)
-  gradm=matrix(nrow=n,ncol=d)
-  for(i in 1:n){
-    gradm[i,]=grad(X[i,],y[i],beta,lambda)
-  }
-  return(GRAD=gradm)
+  bo=matrix(rep(sigmoid(z)-y,d),nrow=n,ncol=d)
+  be=matrix(rep(beta,n),nrow=n,ncol=d)
+  GRAD=X*bo+lambda*be
+  return(GRAD)
 }
 
-
-#Compute global loss
+#evaluate loss function for plot
 cost=function(X,y,beta,lambda){
   n=length(y)
   indloss=array()
@@ -92,7 +69,33 @@ cost=function(X,y,beta,lambda){
   return(list(individual.loss=indloss,total.loss=total_loss))
 }
 
-#synthesis gradient 
+
+#evaluate loss function in iteration
+costz=function(z,y,beta,lambda){
+  n=length(y)
+  indloss=array()
+  indloss=-y*log(sigmoid(z))-(1-y)*log(1-sigmoid(z))+0.5*lambda*sum(beta^2)
+  total_loss=1/n * sum(indloss)
+  return(list(individual.loss=indloss,total.loss=total_loss))
+}
+
+
+
+#Construct loss-based grafting gradient 
+clbgg=function(X,z,y,beta,lambda,po,b){
+ d=ncol(X)
+ n=nrow(X)
+ g=array()
+ sm=sigmoid(z)-y
+ PM=matrix(rep(po,d),nrow=n,ncol=d)
+ SM=matrix(rep(sm,d),nrow=n,ncol=d)
+ index=sample(1:b,d,prob = po,replace = TRUE)
+ mindex=cbind(index,c(1:d))
+ g=1/b * (X[mindex] * SM[mindex] + lambda*beta) * (1/PM[mindex])  
+ return(as.vector(g))
+}
+
+#Construct gradient-based grafting gradient 
 syngrad=function(CM,po,b){
   d=ncol(CM)
   n=nrow(CM)
@@ -104,27 +107,15 @@ syngrad=function(CM,po,b){
   return(g)
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-sngd.ad.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,lambda,epoch,adaptive.stepsize=FALSE,gradient.based=FALSE,stepsize,b,record.time,ind){
-    
+#GGD Algorithm
+sngd.ad.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,lambda,epoch,adaptive.stepsize=FALSE,gradient.based=FALSE,stepsize,b,record.time){
     sngdbeta00=initial.beta
     a=stepsize
     sngdloss=array()
     sngdtestloss=array()
     sngdgradnorm=array()
     mm=length(trainset.label)
-    #record.time refers to the number of train loss being recorded in a single epoch
+    #record.time refers to the number of train loss recorded in a single epoch
     rt=record.time
     ap=mm%/%(rt-1)
     E=1
@@ -144,22 +135,31 @@ sngd.ad.opt=function(trainset,trainset.label,testset,testset.label,initial.beta,
           sa=sample(1:mm,b)
           xdesign=trainset[sa,]
           yres=trainset.label[sa]
-          GRad=GradE(xdesign,yres,sngdbeta00,lambda)
+          zint=as.vector(xdesign%*%sngdbeta00)
           if(gradient.based==TRUE){
+            GRad=GradEz(xdesign,zint,yres,sngdbeta00,lambda)
             gbn=(apply(GRad^2,1,sum))^0.5
-            po=as.vector(gbn/sum(gbn))
+            if(sum(gbn==0) || is.na(sum(gbn))){
+              po=as.vector(c(rep(1/b,b)))
+            }else {
+              po=as.vector(gbn/sum(gbn))
+            }
+          g=syngrad(GRad,po,b)
           }
           if(gradient.based==FALSE){
-            losslen=cost(xdesign,yres,sngdbeta00,lambda)$individual.loss
-            po=as.vector(losslen/sum(losslen))
+            losslen=costz(zint,yres,sngdbeta00,lambda)
+            if(losslen$total.loss==0 || is.na(losslen$total.loss)){
+              po=as.vector(c(rep(1/b.b)))
+            }else {
+              po=as.vector(losslen$individual.loss/losslen$total.loss)
+            }
+          g=clbgg(xdesign,zint,yres,sngdbeta00,lambda,po,b)
           }
-          g=syngrad(GRad,po,b)
-          
           if(adaptive.stepsize==FALSE){
             sngdbeta00=sngdbeta00- a*g
           }
           if(adaptive.stepsize==TRUE){
-            a=1/(1+floor((E-1)*mm+m)/mm)*initial.stepsize
+            a=1/(1+floor((E-1)*mm+m)/mm)*stepsize
             sngdbeta00=sngdbeta00-a*g
           }
           m=m+1
